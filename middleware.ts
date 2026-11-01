@@ -49,6 +49,13 @@ setAll(items: { name: string; value: string; options?: CookieOptions }[]) {
   return response;
 }
 
+
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/:path*", "/login"],
+  matcher: [
+    "/dashboard/:path*",
+    "/api/:path*",
+    "/login",
+    "/set-password",
+  ],
 };
+
