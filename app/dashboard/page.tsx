@@ -15,5 +15,13 @@ export default async function Dashboard(){
       + New Sermon
     </a>
   </div>
-{sermons?.length?sermons.map(s=><div className="row" key={s.id}><p>{s.title} <span className="muted">· {s.program}</span></p><span className="pill">{s.status}</span></div>):<p className="muted">No sermons yet. Upload intake will be added after authentication and database setup.</p>}</section><section id="assignments" className="panel"><h2>Human & AI Assignments</h2>{tasks?.length?tasks.map(t=><div className="row" key={t.id}><p>{t.title} <span className="muted">· {t.assignee_type}</span></p><span className="pill">{t.status}</span></div>):<p className="muted">No assignments yet.</p>}</section><section id="approvals" className="panel"><h2>Approvals</h2><p className="muted">{approvals?.filter(a=>a.status==='pending').length??0} items awaiting review. Publication integration will remain disabled until the approval gate is implemented.</p></section></main>
+{sermons?.length?sermons.map(s=><div className="row" key={s.id}><p>{s.title} <span className="muted">· {s.program}</span></p><span className="pill">{s.status}</span></div>):<p className="muted">No sermons yet. Upload intake will be added after authentication and database setup.</p>}</section>
+<section id="assignments" className="panel">
+  <div className="top">
+    <h2>Human & AI Assignments</h2>
+    <a href="/tasks/new" className="button">
+      + New Assignment
+    </a>
+  </div>
+{tasks?.length?tasks.map(t=><div className="row" key={t.id}><p>{t.title} <span className="muted">· {t.assignee_type}</span></p><span className="pill">{t.status}</span></div>):<p className="muted">No assignments yet.</p>}</section><section id="approvals" className="panel"><h2>Approvals</h2><p className="muted">{approvals?.filter(a=>a.status==='pending').length??0} items awaiting review. Publication integration will remain disabled until the approval gate is implemented.</p></section></main>
 }
