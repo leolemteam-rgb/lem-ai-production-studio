@@ -1,5 +1,31 @@
 
-export default function NewSermon() {
+import { redirect } from "next/navigation";
+import { supabaseServer } from "../../../lib/supabase/server";
+
+
+export default async function NewSermon() {
+  const supabase = await supabaseServer();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: membership, error } = await supabase
+    .from("memberships")
+    .select("role, active")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .in("role", ["admin", "manager"])
+    .maybeSingle();
+
+  if (error || !membership) {
+    redirect("/dashboard");
+  }
+
   return (
     <main className="wrap">
       <header className="top">
