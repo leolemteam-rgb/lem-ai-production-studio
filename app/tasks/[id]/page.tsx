@@ -1,175 +1,28 @@
-
 import { redirect, notFound } from "next/navigation";
 import { supabaseServer } from "../../../lib/supabase/server";
-
-const allowedStatuses = [
-  "queued",
-  "working",
-  "review",
-  "done",
-  "failed",
-];
-
-export default async function TaskDetails({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; saved?: string }>;
-}) {
-  const { id } = await params;
-  const query = await searchParams;
-
-  const supabase = await supabaseServer();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: membership } = await supabase
-    .from("memberships")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .in("role", ["admin", "manager"])
-    .maybeSingle();
-
-  if (!membership) redirect("/dashboard");
-
-  const { data: task, error: taskError } = await supabase
-    .from("tasks")
-    .select("id, title, status, assignee_type, assignee_agent_id")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (taskError) {
-    console.error("Task loading failed:", {
-      code: taskError.code,
-      message: taskError.message,
-    });
-    throw new Error("Unable to load assignment.");
-  }
-
-  if (!task) notFound();
-
-  let agentName = "Unassigned";
-
-  if (task.assignee_type === "agent" && task.assignee_agent_id) {
-    const { data: agent } = await supabase
-      .from("agents")
-      .select("name")
-      .eq("id", task.assignee_agent_id)
-      .maybeSingle();
-
-    if (agent) agentName = agent.name;
-  }
-
-  async function updateTask(formData: FormData) {
-    "use server";
-
-    const sb = await supabaseServer();
-
-    const {
-      data: { user },
-    } = await sb.auth.getUser();
-
-    if (!user) redirect("/login");
-
-    const { data: membership } = await sb
-      .from("memberships")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("active", true)
-      .in("role", ["admin", "manager"])
-      .maybeSingle();
-
-    if (!membership) redirect("/dashboard");
-
-    const status = String(formData.get("status") || "");
-
-    if (!allowedStatuses.includes(status)) {
-      redirect(`/tasks/${id}?error=validation`);
-    }
-
-    const { data: updated, error } = await sb
-      .from("tasks")
-      .update({ status })
-      .eq("id", id)
-      .select("id")
-      .maybeSingle();
-
-    if (error || !updated) {
-      console.error("Task update failed:", {
-        code: error?.code || "no_updated_row",
-        message: error?.message || "No task was updated",
-      });
-
-      redirect(`/tasks/${id}?error=save`);
-    }
-
-    redirect(`/tasks/${id}?saved=1`);
-  }
-
-  return (
-    <main className="wrap">
-      <h1>Manage Production Assignment</h1>
-
-      <h2>{task.title}</h2>
-
-      <p>
-        Assigned to: <strong>{agentName}</strong>
-      </p>
-
-      <p>
-        Current Status: <strong>{task.status}</strong>
-      </p>
-
-      {query.saved === "1" && (
-        <p role="status" style={{ color: "green" }}>
-          Assignment status updated successfully.
-        </p>
-      )}
-
-      {query.error === "save" && (
-        <p role="alert" style={{ color: "red" }}>
-          Unable to update assignment status.
-        </p>
-      )}
-
-      {query.error === "validation" && (
-        <p role="alert" style={{ color: "red" }}>
-          Please select a valid status.
-        </p>
-      )}
-
-      <form action={updateTask}>
-        <label htmlFor="status">
-          Change Assignment Status
-        </label>
-
-        <select
-          id="status"
-          name="status"
-          defaultValue={task.status}
-          required
-        >
-          {allowedStatuses.map((status) => (
-            <option key={status} value={status}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </option>
-          ))}
-        </select>
-
-        <button type="submit">
-          Update Status
-        </button>
-      </form>
-
-      <p>
-        <a href="/dashboard">Back to Dashboard</a>
-      </p>
-    </main>
-  );
+const allowedStatuses=['queued','working','review','done','failed'];
+async function manager(){const sb=await supabaseServer();const {data:{user}}=await sb.auth.getUser();if(!user) redirect('/login');const {data:m}=await sb.from('memberships').select('role').eq('user_id',user.id).eq('active',true).in('role',['admin','manager']).maybeSingle();if(!m) redirect('/access-denied');return sb}
+export default async function TaskDetails({params,searchParams}:{params:Promise<{id:string}>,searchParams:Promise<{error?:string,saved?:string}>}){
+ const {id}=await params;const q=await searchParams;const sb=await manager();
+ const {data:task,error}=await sb.from('tasks').select('id,sermon_id,title,status,assignee_type,assignee_agent_id').eq('id',id).maybeSingle();if(error) throw new Error('Unable to load task');if(!task) notFound();
+ const [{data:agent},{data:sermon},{data:content},{data:draft}]=await Promise.all([
+ task.assignee_agent_id?sb.from('agents').select('name,enabled').eq('id',task.assignee_agent_id).maybeSingle():Promise.resolve({data:null}),
+ sb.from('sermons').select('title,program').eq('id',task.sermon_id).maybeSingle(),
+ sb.from('sermon_content').select('source_text').eq('sermon_id',task.sermon_id).maybeSingle(),
+ sb.from('generated_drafts').select('body,status,updated_at').eq('task_id',id).maybeSingle()]);
+ const jordan=task.assignee_type==='agent'&&agent?.name==='Jordan Hayes'&&agent.enabled;
+ async function generate(){'use server';const s=await manager();const {data:t}=await s.from('tasks').select('id,sermon_id,assignee_type,assignee_agent_id').eq('id',id).maybeSingle();if(!t||t.assignee_type!=='agent'||!t.assignee_agent_id) redirect(`/tasks/${id}?error=agent`);
+ const [{data:a},{data:sr},{data:c}]=await Promise.all([s.from('agents').select('name,enabled').eq('id',t.assignee_agent_id).maybeSingle(),s.from('sermons').select('title,program').eq('id',t.sermon_id).maybeSingle(),s.from('sermon_content').select('source_text').eq('sermon_id',t.sermon_id).maybeSingle()]);
+ if(a?.name!=='Jordan Hayes'||!a.enabled||!sr||!c?.source_text?.trim())redirect(`/tasks/${id}?error=source`);
+ const key=process.env.OPENAI_API_KEY;if(!key)redirect(`/tasks/${id}?error=config`);
+ let body='';try{const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),25000);
+ try{const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'gpt-4.1-mini',max_output_tokens:650,store:false,instructions:'You are Jordan Hayes, ministry media content specialist. Create a concise, engaging YouTube video description for Larry Elder Ministries. Base claims strictly on the provided sermon material. Do not invent quotes, scriptures, speaker names, or theological claims. Include a brief opening, a clear invitation to like, share, comment, and subscribe, and 4-7 relevant hashtags. Output only the finished description.',input:`Program: ${sr.program}\nTitle: ${sr.title}\nSermon material:\n${c.source_text.slice(0,25000)}`}),signal:controller.signal,cache:'no-store'});if(!response.ok){console.error('OpenAI request failed',response.status);redirect(`/tasks/${id}?error=api`)}const result=await response.json();body=(result.output||[]).flatMap((o:{content?:{type:string,text?:string}[]})=>o.content||[]).filter((x:{type:string})=>x.type==='output_text').map((x:{text?:string})=>x.text||'').join('\n').trim();}finally{clearTimeout(timeout)}}catch(e){if(e&&typeof e==='object'&&'digest' in e)throw e;console.error('AI generation error');redirect(`/tasks/${id}?error=api`)}
+ if(!body)redirect(`/tasks/${id}?error=api`);
+ const {error:saveError}=await s.rpc('save_ai_draft',{p_task_id:id,p_body:body});if(saveError){console.error('Draft save failed',saveError.code);redirect(`/tasks/${id}?error=draft`)}
+ await s.from('tasks').update({status:'review'}).eq('id',id);redirect(`/tasks/${id}?saved=generated`)}
+ async function review(form:FormData){'use server';const s=await manager();const decision=String(form.get('decision')||'');if(!['approved','revision_requested'].includes(decision))redirect(`/tasks/${id}?error=review`);const {error}=await s.rpc('review_ai_draft',{p_task_id:id,p_decision:decision});if(error)redirect(`/tasks/${id}?error=review`);await s.from('tasks').update({status:decision==='approved'?'done':'working'}).eq('id',id);redirect(`/tasks/${id}?saved=reviewed`)}
+ async function updateTask(form:FormData){'use server';const s=await manager();const status=String(form.get('status')||'');if(!allowedStatuses.includes(status))redirect(`/tasks/${id}?error=validation`);const {error}=await s.from('tasks').update({status}).eq('id',id);if(error)redirect(`/tasks/${id}?error=save`);redirect(`/tasks/${id}?saved=1`)}
+ return <main className="wrap"><a href="/dashboard">← Dashboard</a><h1>Manage Production Assignment</h1><section className="panel"><h2>{task.title}</h2><p>Assigned to: <strong>{agent?.name||'Unassigned'}</strong></p><p>Task status: <strong>{task.status}</strong></p><p>Sermon: <a href={`/sermons/${task.sermon_id}`}>{sermon?.title||'Open sermon'}</a></p>{q.saved&&<p role="status">{q.saved==='generated'?'AI draft generated and saved.':q.saved==='reviewed'?'Review decision saved.':'Assignment updated.'}</p>}{q.error&&<p role="alert">{q.error==='source'?'Save sermon content first.':q.error==='config'?'Server API key is not configured.':q.error==='api'?'AI generation failed. No draft was saved.':q.error==='draft'?'Draft could not be saved. Verify SQL migration 002.':'Action failed. Please try again.'}</p>}</section>
+ {jordan&&<section className="panel"><h2>Jordan Hayes — YouTube Description</h2><p className="muted">{content?.source_text?.trim()?'Sermon material is ready.':'Paste and save sermon material before generating.'}</p><form action={generate}><button type="submit" disabled={!content?.source_text?.trim()}>{draft?'Regenerate Description (replaces current draft)':'Generate YouTube Description'}</button></form><p className="muted">Each click sends a new billable API request. Nothing publishes automatically.</p>{draft&&<><h2>Saved Draft · {draft.status}</h2><div style={{whiteSpace:'pre-wrap',padding:16,background:'#0c1729',borderRadius:10}}>{draft.body}</div>{draft.status!=='approved'&&<form action={review} style={{display:'flex',gap:12,marginTop:16,flexWrap:'wrap'}}><button type="submit" name="decision" value="approved">Approve Draft</button><button type="submit" name="decision" value="revision_requested">Request Revision</button></form>}</>}</section>}
+ <section className="panel"><h2>Assignment Status</h2><form action={updateTask}><label htmlFor="status">Change status</label><select id="status" name="status" defaultValue={task.status}>{allowedStatuses.map(x=><option key={x} value={x}>{x}</option>)}</select><p><button type="submit">Update Status</button></p></form></section></main>
 }

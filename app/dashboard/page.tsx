@@ -36,11 +36,11 @@ if (!membership) {
       + New Sermon
     </a>
   </div>
-{sermons?.length?sermons.map(s=><div className="row" key={s.id}><p>{s.title} <span className="muted">· {s.program}</span></p><span className="pill">{s.status}</span></div>):<p className="muted">No sermons yet. Upload intake will be added after authentication and database setup.</p>}</section>
+{sermons?.length?sermons.map(s=><div className="row" key={s.id}><p><a href={`/sermons/${s.id}`}>{s.title}</a> <span className="muted">· {s.program}</span></p><span className="pill">{s.status}</span></div>):<p className="muted">No sermons yet. Upload intake will be added after authentication and database setup.</p>}</section>
 <section id="assignments" className="panel">
   <div className="top">
     <h2>Human & AI Assignments</h2>
-    <a href="//new" className="button">
+    <a href="/tasks/new" className="button">
       + New Assignment
     </a>
   </div>
