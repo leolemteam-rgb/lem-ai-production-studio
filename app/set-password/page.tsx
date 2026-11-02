@@ -46,9 +46,17 @@ export default async function SetPassword({
       password,
     });
 
-    if (error) {
-      redirect("/set-password?error=update");
-    }
+    
+if (error) {
+  console.error("Supabase password update failed:", {
+    message: error.message,
+    code: error.code,
+    status: error.status,
+  });
+
+  redirect("/set-password?error=update");
+}
+
 
     redirect("/dashboard");
   }
