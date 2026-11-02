@@ -19,9 +19,27 @@ export default async function Dashboard(){
 <section id="assignments" className="panel">
   <div className="top">
     <h2>Human & AI Assignments</h2>
-    <a href="/tasks/new" className="button">
+    <a href="//new" className="button">
       + New Assignment
     </a>
   </div>
-{tasks?.length?tasks.map(t=><div className="row" key={t.id}><p>{t.title} <span className="muted">· {t.assignee_type}</span></p><span className="pill">{t.status}</span></div>):<p className="muted">No assignments yet.</p>}</section><section id="approvals" className="panel"><h2>Approvals</h2><p className="muted">{approvals?.filter(a=>a.status==='pending').length??0} items awaiting review. Publication integration will remain disabled until the approval gate is implemented.</p></section></main>
+
+{tasks?.length ? (
+  tasks.map((t) => (
+    <div className="row" key={t.id}>
+      <p>
+        <a href={`/tasks/${t.id}`}>
+          {t.title}
+        </a>
+        <span className="muted">
+          {" "}· {t.assignee_type}
+        </span>
+      </p>
+      <span className="pill">{t.status}</span>
+    </div>
+  ))
+) : (
+  <p className="muted">No assignments yet.</p>
+)}
+</section><section id="approvals" className="panel"><h2>Approvals</h2><p className="muted">{approvals?.filter(a=>a.status==='pending').length??0} items awaiting review. Publication integration will remain disabled until the approval gate is implemented.</p></section></main>
 }
