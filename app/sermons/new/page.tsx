@@ -2,8 +2,12 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "../../../lib/supabase/server";
 
-
-export default async function NewSermon() {
+export default async function NewSermon({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error: formError } = await searchParams;
   const supabase = await supabaseServer();
 
   const {
@@ -14,15 +18,76 @@ export default async function NewSermon() {
     redirect("/login");
   }
 
-  const { data: membership, error } = await supabase
+  const { data: membership } = await supabase
     .from("memberships")
-    .select("role, active")
+    .select("role")
     .eq("user_id", user.id)
     .eq("active", true)
     .in("role", ["admin", "manager"])
     .maybeSingle();
 
-  if (error || !membership) {
+  if (!membership) {
+    redirect("/dashboard");
+  }
+
+  async function saveSermon(formData: FormData) {
+    "use server";
+
+    const sb = await supabaseServer();
+
+    const {
+      data: { user },
+    } = await sb.auth.getUser();
+
+    if (!user) {
+      redirect("/login");
+    }
+
+    const { data: membership } = await sb
+      .from("memberships")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("active", true)
+      .in("role", ["admin", "manager"])
+      .maybeSingle();
+
+    if (!membership) {
+      redirect("/dashboard");
+    }
+
+    const title = String(formData.get("title") || "").trim();
+    const program = String(formData.get("program") || "");
+
+    const allowedPrograms = [
+      "Sunday Worship",
+      "Wednesday Bible Study",
+      "Healing School",
+    ];
+
+    if (
+      !title ||
+      title.length > 200 ||
+      !allowedPrograms.includes(program)
+    ) {
+      redirect("/sermons/new?error=validation");
+    }
+
+    const { error } = await sb.from("sermons").insert({
+      title,
+      program,
+      status: "draft",
+      created_by: user.id,
+    });
+
+    if (error) {
+      console.error("Sermon creation failed:", {
+        code: error.code,
+        message: error.message,
+      });
+
+      redirect("/sermons/new?error=save");
+    }
+
     redirect("/dashboard");
   }
 
@@ -42,12 +107,13 @@ export default async function NewSermon() {
       <section className="panel">
         <h2>Sermon Intake</h2>
 
-        <form>
+        <form action={saveSermon}>
           <label>
             Message Title
             <input
               type="text"
               name="title"
+              maxLength={200}
               placeholder="Enter sermon or lesson title"
               required
             />
@@ -71,10 +137,20 @@ export default async function NewSermon() {
             </select>
           </label>
 
-          <button type="button" disabled>
-            Save Sermon — Coming Next
-          </button>
+          <button type="submit">Save Sermon</button>
         </form>
+
+        {formError === "validation" && (
+          <p role="alert">
+            Enter a valid title and select a ministry program.
+          </p>
+        )}
+
+        {formError === "save" && (
+          <p role="alert">
+            Unable to save sermon. Please try again.
+          </p>
+        )}
       </section>
     </main>
   );
