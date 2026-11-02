@@ -1,7 +1,28 @@
 import {supabaseServer} from '../../lib/supabase/server';
 import {redirect} from 'next/navigation';
 export default async function Dashboard(){
- const sb=await supabaseServer();const {data:{user}}=await sb.auth.getUser();if(!user)redirect('/login');
+ const sb=await supabaseServer();const {data:{user}}=await sb.auth.getUser();
+if (!user) redirect("/login");
+
+const { data: membership, error: membershipError } = await sb
+  .from("memberships")
+  .select("role")
+  .eq("user_id", user.id)
+  .eq("active", true)
+  .maybeSingle();
+
+if (membershipError) {
+  console.error("Dashboard membership check failed:", {
+    code: membershipError.code,
+    message: membershipError.message,
+  });
+  throw new Error("Unable to verify membership.");
+}
+
+if (!membership) {
+  redirect("/access-denied");
+}
+;
  const [{data:sermons,error},{data:tasks},{data:approvals}]=await Promise.all([sb.from('sermons').select('id,title,program,status,created_at').order('created_at',{ascending:false}).limit(10),sb.from('tasks').select('id,title,status,assignee_type').limit(20),sb.from('approvals').select('id,status').limit(20)]);
  async function logout(){'use server';const s=await supabaseServer();await s.auth.signOut();redirect('/login')}
  return <main className="wrap"><header className="top"><div><p className="gold">LARRY ELDER MINISTRIES</p><h1>AI Production Studio</h1><p className="muted">Private production command center</p></div><form action={logout}><button>Sign out</button></form></header><nav className="nav"><a href="#sermons">Sermons</a><a href="#assignments">Assignments</a><a href="#approvals">Approvals</a></nav><section className="grid"><div className="panel"><span className="muted">Sermons</span><div className="stat">{sermons?.length??0}</div></div><div className="panel"><span className="muted">Tasks</span><div className="stat">{tasks?.length??0}</div></div><div className="panel"><span className="muted">Pending approvals</span><div className="stat">{approvals?.filter(a=>a.status==='pending').length??0}</div></div></section>
