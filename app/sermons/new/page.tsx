@@ -75,7 +75,8 @@ export default async function NewSermon({
     const { error } = await sb.from("sermons").insert({
       title,
       program,
-      status: "draft",
+      
+status: "queued",
       created_by: user.id,
     });
 
